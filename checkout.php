@@ -1,69 +1,49 @@
 <?php
-require __DIR__ . '/config/config.php';
-require __DIR__ . '/includes/helpers.php';
-
+require __DIR__ . '/../config/config.php';
 session_start();
-if (!userLoggedIn()) { header('Location: user/login.php'); exit; }
+if (empty($_SESSION['user_id'])) { header('Location: login.php'); exit; }
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $user = currentUser();
-    $items = cartItems();
-    $total = cartTotal();
-    if (!$items) { header('Location: cart.php'); exit; }
+$orderId = (int)($_GET['id'] ?? 0);
+$order = db()->prepare('SELECT * FROM orders WHERE id = ? AND user_id = ? LIMIT 1');
+$order->execute([$orderId, $_SESSION['user_id']]);
+$order = $order->fetch();
+if (!$order) { header('Location: dashboard.php'); exit; }
 
-    $orderStmt = db()->prepare('INSERT INTO orders(user_id, customer_name, phone, email, address, total, status) VALUES(?,?,?,?,?,?,?)');
-    $orderStmt->execute([
-        $user['id'],
-        $user['name'],
-        $user['phone'] ?? '',
-        $user['email'],
-        $user['address'] ?? '',
-        $total,
-        'pending'
-    ]);
-    $orderId = db()->lastInsertId();
-
-    $itemStmt = db()->prepare('INSERT INTO order_items(order_id, product_id, product_name, quantity, unit_price) VALUES(?,?,?,?,?)');
-    foreach ($items as $row) {
-        $product = $row['product'];
-        $itemStmt->execute([$orderId, $product['id'], $product['name'], $row['qty'], $product['price']]);
-    }
-
-    clearCart();
-    header('Location: user/dashboard.php?success=1');
-    exit;
-}
-
-$items = cartItems();
-$total = cartTotal();
-$user = currentUser();
+$items = db()->prepare('SELECT * FROM order_items WHERE order_id = ?');
+$items->execute([$orderId]);
+$items = $items->fetchAll();
 ?>
 <!doctype html>
 <html lang="bn">
 <head>
   <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Checkout - <?=e(siteName())?></title>
-  <link rel="stylesheet" href="assets/style.css">
+  <title>Order Details</title>
+  <link rel="stylesheet" href="../assets/style.css">
 </head>
-<body>
-  <header class="topbar"><div class="brand-wrap"><div class="logo-circle">G</div><div class="brand-text"><strong><?=e(siteName())?></strong></div></div><div class="header-right"><a href="index.php">হোম</a><a href="cart.php">কার্ট</a></div></header>
-  <main class="page-shell compact">
-    <section class="panel-form">
-      <h2>চেকআউট</h2>
-      <form method="post" class="stacked-form">
-        <label>নাম<input name="name" value="<?=e($user['name'])?>" required></label>
-        <label>ফোন<input name="phone" value="<?=e($user['phone'] ?? '')?>" required></label>
-        <label>ইমেইল<input name="email" type="email" value="<?=e($user['email'])?>" required></label>
-        <label>ঠিকানা<textarea name="address" required><?=e($user['address'] ?? '')?></textarea></label>
-        <div class="order-summary">
-          <h3>অর্ডার সামারি</h3>
-          <?php foreach ($items as $row): $p = $row['product']; ?>
-            <div class="summary-row"><span><?=e($p['name'])?> x <?=e($row['qty'])?></span><span>৳<?=e(number_format((float)$p['price'] * (int)$row['qty'], 2))?></span></div>
+<body class="user-body">
+  <header class="topbar user-topbar">
+    <div class="brand-wrap"><div class="logo-circle">G</div><div class="brand-text"><strong><?= e(setting('site_name','GadgetMart')) ?></strong></div></div>
+    <div class="header-right"><a href="../index.php">হোম</a><a href="dashboard.php">ড্যাশবোর্ড</a><a href="logout.php">লগআউট</a></div>
+  </header>
+  <main class="page-shell dashboard-shell">
+    <section class="panel">
+      <h2>অর্ডার ডিটেইল #<?= e($orderId) ?></h2>
+      <p><strong>স্ট্যাটাস:</strong> <?= e($order['status']) ?></p>
+      <p><strong>ঠিকানা:</strong> <?= e($order['address']) ?></p>
+      <p><strong>মোট:</strong> ৳<?= e(number_format((float)$order['total'], 2)) ?></p>
+      <div class="table-wrap">
+        <table>
+          <tr><th>প্রোডাক্ট</th><th>পরিমাণ</th><th>মূল্য</th><th>মোট</th></tr>
+          <?php foreach ($items as $it): ?>
+            <tr>
+              <td><?= e($it['product_name']) ?></td>
+              <td><?= e($it['quantity']) ?></td>
+              <td>৳<?= e(number_format((float)$it['unit_price'], 2)) ?></td>
+              <td>৳<?= e(number_format((float)$it['unit_price'] * (int)$it['quantity'], 2)) ?></td>
+            </tr>
           <?php endforeach; ?>
-          <div class="summary-row total"><span>মোট</span><strong>৳<?=e(number_format((float)$total, 2))?></strong></div>
-        </div>
-        <button type="submit" class="btn btn-primary full-width">অর্ডার নিশ্চিত করুন</button>
-      </form>
+        </table>
+      </div>
     </section>
   </main>
 </body>

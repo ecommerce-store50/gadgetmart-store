@@ -1,19 +1,63 @@
-# GadgetMart Store
+<?php
+require __DIR__ . '/../config/config.php';
+session_start();
+if (empty($_SESSION['user_id'])) { header('Location: login.php'); exit; }
 
-InfinityFree-compatible PHP/MySQL ecommerce starter with a configurable storefront and admin settings.
+$userId = $_SESSION['user_id'];
+$user = db()->prepare('SELECT * FROM users WHERE id = ? LIMIT 1');
+$user->execute([$userId]);
+$user = $user->fetch();
 
-## Included
-- Bengali GadgetMart-style homepage
-- Admin login and dashboard
-- Editable site name, tagline, footer description, phone, email, address
-- Editable Facebook, Instagram, YouTube, X/Twitter and WhatsApp links
-- Categories, products, stock and orders schema
+$orders = db()->prepare('SELECT * FROM orders WHERE user_id = ? ORDER BY created_at DESC');
+$orders->execute([$userId]);
+$orders = $orders->fetchAll();
 
-## Installation
-1. Create a MySQL database in InfinityFree and import `database/schema.sql`.
-2. Copy `config/config.example.php` to `config/config.php` and enter database credentials.
-3. Upload the repository files to `htdocs`.
-4. Open `/install.php` once to create the first admin (change/delete this file afterward).
-5. Visit `/admin/login.php`.
+$success = !empty($_GET['success']) ? 'অর্ডার সফলভাবে সম্পন্ন হয়েছে।' : '';
+?>
+<!doctype html>
+<html lang="bn">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>User Dashboard</title>
+  <link rel="stylesheet" href="../assets/style.css">
+</head>
+<body class="user-body">
+  <header class="topbar user-topbar">
+    <div class="brand-wrap"><div class="logo-circle">G</div><div class="brand-text"><strong><?= e(setting('site_name','GadgetMart')) ?></strong></div></div>
+    <div class="header-right"><a href="../index.php">হোম</a><a href="../products.php">শপ</a><a href="logout.php">লগআউট</a></div>
+  </header>
+  <main class="page-shell dashboard-shell">
+    <section class="user-profile">
+      <div>
+        <h2>স্বাগতম, <?= e($user['name']) ?></h2>
+        <p><?= e($user['email']) ?> | <?= e($user['phone'] ?? '') ?></p>
+      </div>
+      <a href="../products.php" class="btn btn-primary">আরও শপ করুন</a>
+    </section>
 
-Do not commit real credentials. Change the generated admin password and remove `install.php` after setup.
+    <?php if ($success): ?><div class="alert success"><?= e($success) ?></div><?php endif; ?>
+
+    <section class="panel">
+      <h3>আপনার অর্ডার</h3>
+      <?php if (!$orders): ?>
+        <div class="alert success">এখনো কোন অর্ডার নেই।</div>
+      <?php else: ?>
+        <div class="table-wrap">
+          <table>
+            <tr><th>অর্ডার</th><th>তারিখ</th><th>মোট</th><th>স্ট্যাটাস</th><th>ডিটেইল</th></tr>
+            <?php foreach ($orders as $o): ?>
+              <tr>
+                <td>#<?= e($o['id']) ?></td>
+                <td><?= e($o['created_at']) ?></td>
+                <td>৳<?= e(number_format((float)$o['total'], 2)) ?></td>
+                <td><span class="status-badge status-<?= e($o['status']) ?>"><?= e($o['status']) ?></span></td>
+                <td><a href="order_detail.php?id=<?= e($o['id']) ?>" class="btn btn-secondary">View</a></td>
+              </tr>
+            <?php endforeach; ?>
+          </table>
+        </div>
+      <?php endif; ?>
+    </section>
+  </main>
+</body>
+</html>

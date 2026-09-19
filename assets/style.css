@@ -1,1 +1,29 @@
-*{box-sizing:border-box}body{margin:0;background:#0d172c;color:#edf2fb;font-family:Arial,"Noto Sans Bengali",sans-serif}header{height:76px;background:#111a30;display:flex;align-items:center;gap:16px;padding:12px 5%;position:sticky;top:0;z-index:2;border-bottom:2px solid #f59b00}header strong{font-size:25px}header nav{margin-left:auto;display:flex;gap:20px}a{color:inherit;text-decoration:none}.logo{background:#f59b00;color:white;border-radius:18px;width:48px;height:48px;display:grid;place-items:center;font-size:28px;font-weight:bold}.hero{margin:56px auto;padding:70px 7%;max-width:1100px;text-align:center;border-radius:38px;background:linear-gradient(135deg,#202532,#14233c)}.hero small{color:#ffab00;font-size:20px}.hero h1{font-size:clamp(35px,7vw,70px);margin:25px 0;color:#ff9d00}.hero p{font-size:20px;color:#aab7cd;line-height:1.8}.button{display:inline-block;background:#f59b00;color:white;padding:17px 28px;border-radius:30px;font-weight:bold;margin-top:15px}main{max-width:1100px;margin:auto;padding:0 20px}section{padding:35px 0}h2{font-size:32px}.grid{display:grid;gap:20px}.categories{grid-template-columns:repeat(auto-fit,minmax(160px,1fr))}.card,.product{background:#202c41;border:1px solid #34445e;border-radius:25px;padding:24px}.card{text-align:center}.emoji{font-size:45px}.products{grid-template-columns:repeat(auto-fit,minmax(220px,1fr))}.product-image{height:170px;border-radius:18px;background:#29364b;display:grid;place-items:center;font-size:65px;margin-bottom:18px}.product h3{font-size:21px}.stars{color:#ffab00}.stars span,p,small{color:#9eabc2}.product b{font-size:25px;display:block;margin-top:15px}footer{border-top:5px solid #f59b00;margin-top:45px;padding:55px 7%;background:#101a31;line-height:1.9}footer h2{color:#ff9d00}.social{display:flex;gap:16px;flex-wrap:wrap}.social a{color:#ffab00}@media(max-width:650px){header nav{display:none}.hero{padding:50px 20px}.hero p{font-size:17px}}
+# GadgetMart Store
+
+InfinityFree-compatible PHP/MySQL ecommerce starter with a configurable storefront and admin settings.
+
+## Included
+- GadgetMart-style home page
+- Admin login and dashboard
+- Editable site name, tagline, footer description, phone, email, address
+- Editable social links
+- Product management (create, edit, delete)
+- Order management with status updates
+- User registration, login and dashboard
+- Order history and detail pages
+
+## Installation
+1. Create a MySQL database in InfinityFree and import `database/schema.sql`.
+2. Copy `config/config.example.php` to `config/config.php` and enter database credentials.
+3. Upload the repository files to `htdocs`.
+4. Open `/install.php` once to create the first admin (change/delete this file afterward).
+5. Visit `/admin/login.php`.
+
+## Next Phase
+- Product image upload
+- Inventory log history
+- Delivery fee and coupon engine
+- Payment gateway integration
+- Product review system
+
+Do not commit real credentials. Change the generated admin password and remove `install.php` after setup.
