@@ -1,131 +1,113 @@
-<?php
-require __DIR__ . '/config/config.php';
-session_start();
+-- GadgetMart database schema for MySQL/MariaDB on InfinityFree
+-- Import this file in phpMyAdmin. This is SQL only; do not rename a PHP file to schema.sql.
 
-if (!isset($_SESSION['user_id'])) { header('Location: user/login.php'); exit; }
+CREATE TABLE IF NOT EXISTS settings (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  setting_key VARCHAR(100) NOT NULL UNIQUE,
+  setting_value TEXT NULL,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
-function cartItemsForCheckout(): array {
-    $cart = $_SESSION['cart'] ?? [];
-    if (!$cart) return [];
-    $ids = array_keys($cart);
-    $placeholders = implode(',', array_fill(0, count($ids), '?'));
-    $stmt = db()->prepare('SELECT * FROM products WHERE id IN (' . $placeholders . ') AND is_active = 1');
-    $stmt->execute($ids);
-    $items = [];
-    foreach ($stmt->fetchAll() as $product) {
-        $qty = (int)($cart[$product['id']]['qty'] ?? 1);
-        $items[] = ['product' => $product, 'qty' => $qty];
-    }
-    return $items;
-}
+CREATE TABLE IF NOT EXISTS admins (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  name VARCHAR(100) NOT NULL,
+  email VARCHAR(190) NOT NULL UNIQUE,
+  password_hash VARCHAR(255) NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
-$deliveryFee = (float)(setting('delivery_fee', '50'));
-$couponCode = trim(setting('coupon_code', ''));
-$couponDisc = (float)(setting('coupon_discount', '0'));
+CREATE TABLE IF NOT EXISTS users (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  name VARCHAR(150) NOT NULL,
+  email VARCHAR(190) NOT NULL UNIQUE,
+  phone VARCHAR(40) NULL,
+  password_hash VARCHAR(255) NOT NULL,
+  address TEXT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $items = cartItemsForCheckout();
-    if (!$items) { header('Location: cart.php'); exit; }
+CREATE TABLE IF NOT EXISTS categories (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  name VARCHAR(120) NOT NULL,
+  icon VARCHAR(20) DEFAULT '📦',
+  is_active TINYINT(1) NOT NULL DEFAULT 1
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
-    foreach ($items as $row) {
-        $product = $row['product'];
-        $qty = (int)$row['qty'];
-        if ($qty > (int)$product['stock']) {
-            header('Location: cart.php?error=stock');
-            exit;
-        }
-    }
+CREATE TABLE IF NOT EXISTS products (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  category_id INT UNSIGNED NULL,
+  name VARCHAR(190) NOT NULL,
+  slug VARCHAR(220) NOT NULL UNIQUE,
+  description TEXT NULL,
+  image VARCHAR(255) NULL,
+  price DECIMAL(12,2) NOT NULL DEFAULT 0,
+  old_price DECIMAL(12,2) NULL,
+  stock INT NOT NULL DEFAULT 0,
+  sku VARCHAR(80) NULL,
+  rating DECIMAL(2,1) NOT NULL DEFAULT 5.0,
+  is_featured TINYINT(1) NOT NULL DEFAULT 0,
+  is_bestseller TINYINT(1) NOT NULL DEFAULT 0,
+  is_active TINYINT(1) NOT NULL DEFAULT 1,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
-    $user = db()->prepare('SELECT * FROM users WHERE id = ? LIMIT 1');
-    $user->execute([$_SESSION['user_id']]);
-    $user = $user->fetch();
+CREATE TABLE IF NOT EXISTS orders (
+  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  user_id INT UNSIGNED NULL,
+  customer_name VARCHAR(150) NOT NULL,
+  phone VARCHAR(40) NOT NULL,
+  email VARCHAR(190) NULL,
+  address TEXT NOT NULL,
+  total DECIMAL(12,2) NOT NULL DEFAULT 0,
+  status ENUM('pending','confirmed','packed','shipped','delivered','cancelled') NOT NULL DEFAULT 'pending',
+  payment_method VARCHAR(30) NOT NULL DEFAULT 'cod',
+  payment_status VARCHAR(30) NOT NULL DEFAULT 'unpaid',
+  payment_reference VARCHAR(80) NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
-    $subtotal = 0.0;
-    foreach ($items as $row) {
-        $p = $row['product'];
-        $subtotal += (float)$p['price'] * (int)$row['qty'];
-    }
+CREATE TABLE IF NOT EXISTS order_items (
+  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  order_id BIGINT UNSIGNED NOT NULL,
+  product_id INT UNSIGNED NULL,
+  product_name VARCHAR(190) NOT NULL,
+  quantity INT NOT NULL,
+  unit_price DECIMAL(12,2) NOT NULL,
+  FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
-    $discount = 0.0;
-    if (!empty($_POST['coupon'])) {
-        $enteredCoupon = trim($_POST['coupon']);
-        if ($enteredCoupon === $couponCode) {
-            $discount = $couponDisc > 0 ? $couponDisc : 0;
-        }
-    }
+CREATE TABLE IF NOT EXISTS stock_logs (
+  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  product_id INT UNSIGNED NOT NULL,
+  change_qty INT NOT NULL,
+  reason VARCHAR(200) NOT NULL,
+  order_id BIGINT UNSIGNED NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
-    $name = trim($_POST['name'] ?? ($user['name'] ?? ''));
-    $phone = trim($_POST['phone'] ?? ($user['phone'] ?? ''));
-    $email = trim($_POST['email'] ?? ($user['email'] ?? ''));
-    $address = trim($_POST['address'] ?? ($user['address'] ?? ''));
+INSERT INTO settings (setting_key, setting_value) VALUES
+('site_name','GadgetMart'),
+('site_tagline','সেরা গ্যাজেটস সেরা দামে'),
+('footer_description','আপনার একমাত্র গ্যাজেট ডেস্টিনেশন।'),
+('phone','+880 1234-567890'),
+('email','support@gadgetmart.com'),
+('address','ঢাকা, বাংলাদেশ'),
+('facebook_url','#'),
+('instagram_url','#'),
+('youtube_url','#'),
+('twitter_url','#'),
+('whatsapp_url','#'),
+('delivery_fee','50'),
+('coupon_code','SAVE10'),
+('coupon_discount','10')
+ON DUPLICATE KEY UPDATE setting_value = VALUES(setting_value);
 
-    if ($name === '' || $phone === '' || $address === '') {
-        header('Location: cart.php?error=missing-data');
-        exit;
-    }
-
-    $total = $subtotal + $deliveryFee - $discount;
-    if ($total < 0) $total = 0;
-
-    $stmt = db()->prepare('INSERT INTO orders (user_id, customer_name, phone, email, address, total, status) VALUES (?, ?, ?, ?, ?, ?, ?)');
-    $stmt->execute([$_SESSION['user_id'], $name, $phone, $email, $address, $total, 'pending']);
-    $orderId = db()->lastInsertId();
-
-    $orderItemStmt = db()->prepare('INSERT INTO order_items (order_id, product_id, product_name, quantity, unit_price) VALUES (?, ?, ?, ?, ?)');
-    foreach ($items as $row) {
-        $p = $row['product'];
-        $qty = (int)$row['qty'];
-        $orderItemStmt->execute([$orderId, $p['id'], $p['name'], $qty, $p['price']]);
-        $stockUpdate = db()->prepare('UPDATE products SET stock = stock - ? WHERE id = ? AND stock >= ?');
-        $stockUpdate->execute([$qty, $p['id'], $qty]);
-
-        $logStmt = db()->prepare('INSERT INTO stock_logs (product_id, change_qty, reason, order_id) VALUES (?, ?, ?, ?)');
-        $logStmt->execute([$p['id'], -$qty, 'Order placed', $orderId]);
-    }
-
-    $_SESSION['cart'] = [];
-    header('Location: user/dashboard.php?success=1');
-    exit;
-}
-
-$items = cartItemsForCheckout();
-$subtotal = 0.0;
-foreach ($items as $row) { $subtotal += (float)$row['product']['price'] * (int)$row['qty']; }
-$total = $subtotal + $deliveryFee;
-$user = db()->prepare('SELECT * FROM users WHERE id = ? LIMIT 1');
-$user->execute([$_SESSION['user_id']]);
-$user = $user->fetch();
-?>
-<!doctype html>
-<html lang="bn">
-<head>
-  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Checkout - <?= e(setting('site_name','GadgetMart')) ?></title>
-  <link rel="stylesheet" href="assets/style.css">
-</head>
-<body>
-  <header class="topbar"><div class="brand-wrap"><div class="logo-circle">G</div><div class="brand-text"><strong><?= e(setting('site_name','GadgetMart')) ?></strong></div></div><div class="header-right"><a href="index.php">হোম</a><a href="cart.php">কার্ট</a></div></header>
-  <main class="page-shell compact">
-    <section class="panel-form">
-      <h2>চেকআউট</h2>
-      <form method="post" class="stacked-form">
-        <label>নাম<input name="name" value="<?= e($user['name']) ?>" required></label>
-        <label>ফোন<input name="phone" value="<?= e($user['phone'] ?? '') ?>" required></label>
-        <label>ইমেইল<input name="email" type="email" value="<?= e($user['email']) ?>" required></label>
-        <label>ঠিকানা<textarea name="address" required><?= e($user['address'] ?? '') ?></textarea></label>
-        <label>কুপন কোড<input name="coupon" placeholder="আপনি যদি কুপন ব্যবহার করেন"></label>
-        <div class="order-summary">
-          <h3>অর্ডার সামারি</h3>
-          <?php foreach ($items as $row): $p = $row['product']; ?>
-            <div class="summary-row"><span><?= e($p['name']) ?> x <?= e($row['qty']) ?></span><span>৳<?= e(number_format((float)$p['price'] * (int)$row['qty'], 2)) ?></span></div>
-          <?php endforeach; ?>
-          <div class="summary-row"><span>ডেলিভারি চার্জ</span><span>৳<?= e(number_format((float)$deliveryFee, 2)) ?></span></div>
-          <?php if ($couponCode): ?><div class="summary-row"><span>কুপন</span><span><?= e($couponCode) ?> (৳<?= e(number_format((float)$couponDisc, 2)) ?>)</span></div><?php endif; ?>
-          <div class="summary-row total"><span>মোট</span><strong>৳<?= e(number_format((float)$total, 2)) ?></strong></div>
-        </div>
-        <button type="submit" class="btn btn-primary full-width">অর্ডার নিশ্চিত করুন</button>
-      </form>
-    </section>
-  </main>
-</body>
-</html>
+INSERT INTO categories (name, icon) VALUES
+('স্মার্টফোন','📱'),
+('ল্যাপটপ','💻'),
+('অডিও','🎧'),
+('স্মার্টওয়াচ','⌚'),
+('অ্যাকসেসরিজ','🔌');
