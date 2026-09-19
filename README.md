@@ -1,16 +1,16 @@
 # GadgetMart Store
 
-PHP/MySQL ecommerce starter for InfinityFree.
+PHP/MySQL ecommerce project for InfinityFree. The storefront follows the supplied GadgetMart screenshots: navy background, orange accents, Bengali headings, category cards, product cards, offers, footer and responsive layouts.
 
-## Payment mode
-- **Cash on Delivery** is the real enabled checkout mode.
-- bKash, Nagad and Card are **demo-only** options. They never call a payment gateway and never charge money; they generate a `DEMO-...` reference for testing.
+## Important upload layout
+Upload the contents of this repository into the hosting `htdocs` root. Keep these paths unchanged:
 
-## Update an existing database
-1. Import `database/migrations/002_demo_payments.sql` once.
-2. If you created the database from scratch, use the current `database/schema.sql`.
-3. Configure `config/config.php` using your InfinityFree database credentials.
-4. Ensure `uploads/products/` is writable for image uploads.
+- `index.php` — storefront homepage
+- `config/config.php` — database credentials
+- `assets/style.css` — stylesheet (CSS only)
+- `database/schema.sql` — SQL only; import this in phpMyAdmin, never upload it as PHP
+- `admin/` — admin area
+- `user/` — customer area
+- `uploads/products/` — writable product image directory
 
-## Security notes
-Delete `install.php` after creating the first admin. Use HTTPS, strong credentials, and do not store real payment secrets in the repository.
+Never rename `checkout.php`, `product.php`, or another PHP file to `schema.sql`. After creating the first admin, delete `install.php`.
