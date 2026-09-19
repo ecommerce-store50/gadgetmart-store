@@ -1,63 +1,16 @@
-<?php
-require __DIR__ . '/../config/config.php';
-session_start();
-if (empty($_SESSION['user_id'])) { header('Location: login.php'); exit; }
+# GadgetMart Store
 
-$userId = $_SESSION['user_id'];
-$user = db()->prepare('SELECT * FROM users WHERE id = ? LIMIT 1');
-$user->execute([$userId]);
-$user = $user->fetch();
+PHP/MySQL ecommerce starter for InfinityFree.
 
-$orders = db()->prepare('SELECT * FROM orders WHERE user_id = ? ORDER BY created_at DESC');
-$orders->execute([$userId]);
-$orders = $orders->fetchAll();
+## Payment mode
+- **Cash on Delivery** is the real enabled checkout mode.
+- bKash, Nagad and Card are **demo-only** options. They never call a payment gateway and never charge money; they generate a `DEMO-...` reference for testing.
 
-$success = !empty($_GET['success']) ? 'অর্ডার সফলভাবে সম্পন্ন হয়েছে।' : '';
-?>
-<!doctype html>
-<html lang="bn">
-<head>
-  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>User Dashboard</title>
-  <link rel="stylesheet" href="../assets/style.css">
-</head>
-<body class="user-body">
-  <header class="topbar user-topbar">
-    <div class="brand-wrap"><div class="logo-circle">G</div><div class="brand-text"><strong><?= e(setting('site_name','GadgetMart')) ?></strong></div></div>
-    <div class="header-right"><a href="../index.php">হোম</a><a href="../products.php">শপ</a><a href="logout.php">লগআউট</a></div>
-  </header>
-  <main class="page-shell dashboard-shell">
-    <section class="user-profile">
-      <div>
-        <h2>স্বাগতম, <?= e($user['name']) ?></h2>
-        <p><?= e($user['email']) ?> | <?= e($user['phone'] ?? '') ?></p>
-      </div>
-      <a href="../products.php" class="btn btn-primary">আরও শপ করুন</a>
-    </section>
+## Update an existing database
+1. Import `database/migrations/002_demo_payments.sql` once.
+2. If you created the database from scratch, use the current `database/schema.sql`.
+3. Configure `config/config.php` using your InfinityFree database credentials.
+4. Ensure `uploads/products/` is writable for image uploads.
 
-    <?php if ($success): ?><div class="alert success"><?= e($success) ?></div><?php endif; ?>
-
-    <section class="panel">
-      <h3>আপনার অর্ডার</h3>
-      <?php if (!$orders): ?>
-        <div class="alert success">এখনো কোন অর্ডার নেই।</div>
-      <?php else: ?>
-        <div class="table-wrap">
-          <table>
-            <tr><th>অর্ডার</th><th>তারিখ</th><th>মোট</th><th>স্ট্যাটাস</th><th>ডিটেইল</th></tr>
-            <?php foreach ($orders as $o): ?>
-              <tr>
-                <td>#<?= e($o['id']) ?></td>
-                <td><?= e($o['created_at']) ?></td>
-                <td>৳<?= e(number_format((float)$o['total'], 2)) ?></td>
-                <td><span class="status-badge status-<?= e($o['status']) ?>"><?= e($o['status']) ?></span></td>
-                <td><a href="order_detail.php?id=<?= e($o['id']) ?>" class="btn btn-secondary">View</a></td>
-              </tr>
-            <?php endforeach; ?>
-          </table>
-        </div>
-      <?php endif; ?>
-    </section>
-  </main>
-</body>
-</html>
+## Security notes
+Delete `install.php` after creating the first admin. Use HTTPS, strong credentials, and do not store real payment secrets in the repository.
