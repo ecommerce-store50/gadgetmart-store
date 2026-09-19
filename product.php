@@ -1,48 +1,16 @@
 <?php
 require __DIR__ . '/config/config.php';
-require __DIR__ . '/includes/helpers.php';
+$products = db()->query("SELECT p.*, c.name category_name FROM products p LEFT JOIN categories c ON c.id=p.category_id WHERE p.is_active=1 ORDER BY p.is_featured DESC, p.id DESC LIMIT 12")->fetchAll();
+$categories = db()->query("SELECT * FROM categories WHERE is_active=1 ORDER BY id")->fetchAll();
 
-session_start();
-
-$productId = (int)($_GET['id'] ?? 0);
-$product = db()->prepare('SELECT * FROM products WHERE id = ? AND is_active = 1 LIMIT 1');
-$product->execute([$productId]);
-$product = $product->fetch();
-if (!$product) { header('Location: index.php'); exit; }
-
-if (!empty($_GET['add_to_cart'])) {
-    addToCart((int)$_GET['add_to_cart']);
-    header('Location: cart.php');
-    exit;
+function productImageUrl($image): string {
+    if (empty($image)) return 'https://placehold.co/800x800/1d2b40/ffffff?text=Gadget';
+    if (preg_match('/^https?:\/\//', $image)) return $image;
+    return '/' . ltrim($image, '/');
 }
-?>
-<!doctype html>
-<html lang="bn">
-<head>
-  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-  <title><?=e($product['name'])?> - <?=e(siteName())?></title>
-  <link rel="stylesheet" href="assets/style.css">
-</head>
-<body>
-  <header class="topbar"><div class="brand-wrap"><div class="logo-circle">G</div><div class="brand-text"><strong><?=e(siteName())?></strong></div></div><div class="header-right"><a href="index.php">হোম</a><a href="products.php">ক্যাটেগরি</a><a href="cart.php">কার্ট</a></div></header>
-  <main class="page-shell">
-    <section class="detail-layout">
-      <div class="detail-image">📦</div>
-      <div class="detail-info">
-        <h1><?=e($product['name'])?></h1>
-        <div class="rating">★★★★★ <span>(<?=e($product['rating'])?>)</span></div>
-        <div class="price-row">
-          <span class="price">৳<?=e(number_format((float)$product['price'], 2))?></span>
-          <?php if (!empty($product['old_price'])): ?><span class="old-price">৳<?=e(number_format((float)$product['old_price'], 2))?></span><?php endif; ?>
-        </div>
-        <p><?=e($product['description'] ?: 'এই প্রোডাক্টটি আপনার জন্য খুবই উপযুক্ত।')?></p>
-        <div class="detail-actions">
-          <a href="product.php?id=<?=e($product['id'])?>&add_to_cart=1" class="btn btn-primary">কার্টে যোগ করুন</a>
-          <a href="checkout.php" class="btn btn-secondary">কেনাকাটা করুন</a>
-        </div>
-        <div class="stock-badge">স্টক: <?=e((int)$product['stock'])?></div>
-      </div>
-    </section>
-  </main>
-</body>
-</html>
+?><!doctype html><html lang="bn"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title><?=e(setting('site_name','GadgetMart'))?></title><link rel="stylesheet" href="assets/style.css"></head><body>
+<header><div class="logo">G</div><strong><?=e(setting('site_name','GadgetMart'))?></strong><nav><a href="#categories">ক্যাটেগরি</a><a href="#products">প্রোডাক্ট</a><a href="admin/login.php">অ্যাডমিন</a></nav></header>
+<main><section class="hero"><small>⚡ নতুন সিজন অফার</small><h1><?=e(setting('site_tagline','সেরা গ্যাজেটস সেরা দামে'))?></h1><p>স্মার্টফোন, ল্যাপটপ, অডিও, স্মার্টওয়াচ ও অ্যাকসেসরিজের সেরা সংগ্রহ।</p><a class="button" href="#products">এখন কেনাকাটা করুন</a></section>
+<section id="categories"><h2>▦ ক্যাটেগরি ব্রাউজ করুন</h2><div class="grid categories"><?php foreach($categories as $c): ?><div class="card"><span class="emoji"><?=e($c['icon'])?></span><h3><?=e($c['name'])?></h3></div><?php endforeach; ?></div></section>
+<section id="products"><h2>★ ফিচার্ড প্রোডাক্ট</h2><div class="grid products"><?php foreach($products as $p): ?><article class="product"><div class="product-image" style="background-image:url('<?= productImageUrl($p['image']) ?>');background-size:cover;background-position:center;"></div><small><?=e($p['category_name']??'গ্যাজেট')?></small><h3><?=e($p['name'])?></h3><div class="stars">★★★★★ <span>(<?=e($p['rating'])?>)</span></div><b>৳ <?=number_format((float)$p['price'])?></b><p>স্টক: <?=e($p['stock'])?></p></article><?php endforeach; ?></div></section></main>
+<footer><h2><?=e(setting('site_name','GadgetMart'))?></h2><p><?=e(setting('footer_description'))?></p><p>☎ <?=e(setting('phone'))?> &nbsp; ✉ <?=e(setting('email'))?> &nbsp; 📍 <?=e(setting('address'))?></p><div class="social"><a href="<?=e(setting('facebook_url','#'))?>">Facebook</a><a href="<?=e(setting('instagram_url','#'))?>">Instagram</a><a href="<?=e(setting('youtube_url','#'))?>">YouTube</a><a href="<?=e(setting('twitter_url','#'))?>">X/Twitter</a><a href="<?=e(setting('whatsapp_url','#'))?>">WhatsApp</a></div></footer></body></html>

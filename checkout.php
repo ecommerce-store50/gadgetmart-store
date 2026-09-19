@@ -1,50 +1,15 @@
 <?php
-require __DIR__ . '/../config/config.php';
-session_start();
-if (empty($_SESSION['user_id'])) { header('Location: login.php'); exit; }
+require __DIR__ . '/config/config.php';
+if (empty($_GET['id'])) { header('Location: index.php'); exit; }
+$productId = (int)$_GET['id'];
+$product = db()->prepare('SELECT * FROM products WHERE id = ? AND is_active = 1 LIMIT 1');
+$product->execute([$productId]);
+$product = $product->fetch();
+if (!$product) { header('Location: index.php'); exit; }
 
-$orderId = (int)($_GET['id'] ?? 0);
-$order = db()->prepare('SELECT * FROM orders WHERE id = ? AND user_id = ? LIMIT 1');
-$order->execute([$orderId, $_SESSION['user_id']]);
-$order = $order->fetch();
-if (!$order) { header('Location: dashboard.php'); exit; }
-
-$items = db()->prepare('SELECT * FROM order_items WHERE order_id = ?');
-$items->execute([$orderId]);
-$items = $items->fetchAll();
-?>
-<!doctype html>
-<html lang="bn">
-<head>
-  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Order Details</title>
-  <link rel="stylesheet" href="../assets/style.css">
-</head>
-<body class="user-body">
-  <header class="topbar user-topbar">
-    <div class="brand-wrap"><div class="logo-circle">G</div><div class="brand-text"><strong><?= e(setting('site_name','GadgetMart')) ?></strong></div></div>
-    <div class="header-right"><a href="../index.php">হোম</a><a href="dashboard.php">ড্যাশবোর্ড</a><a href="logout.php">লগআউট</a></div>
-  </header>
-  <main class="page-shell dashboard-shell">
-    <section class="panel">
-      <h2>অর্ডার ডিটেইল #<?= e($orderId) ?></h2>
-      <p><strong>স্ট্যাটাস:</strong> <?= e($order['status']) ?></p>
-      <p><strong>ঠিকানা:</strong> <?= e($order['address']) ?></p>
-      <p><strong>মোট:</strong> ৳<?= e(number_format((float)$order['total'], 2)) ?></p>
-      <div class="table-wrap">
-        <table>
-          <tr><th>প্রোডাক্ট</th><th>পরিমাণ</th><th>মূল্য</th><th>মোট</th></tr>
-          <?php foreach ($items as $it): ?>
-            <tr>
-              <td><?= e($it['product_name']) ?></td>
-              <td><?= e($it['quantity']) ?></td>
-              <td>৳<?= e(number_format((float)$it['unit_price'], 2)) ?></td>
-              <td>৳<?= e(number_format((float)$it['unit_price'] * (int)$it['quantity'], 2)) ?></td>
-            </tr>
-          <?php endforeach; ?>
-        </table>
-      </div>
-    </section>
-  </main>
-</body>
-</html>
+function productImageUrl($image): string {
+    if (empty($image)) return 'https://placehold.co/800x800/1d2b40/ffffff?text=Gadget';
+    if (preg_match('/^https?:\/\//', $image)) return $image;
+    return '/' . ltrim($image, '/');
+}
+?><!doctype html><html lang="bn"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title><?=e($product['name'])?> - <?=e(setting('site_name','GadgetMart'))?></title><link rel="stylesheet" href="assets/style.css"></head><body><header><div class="logo">G</div><strong><?=e(setting('site_name','GadgetMart'))?></strong><nav><a href="index.php">হোম</a><a href="products.php">প্রোডাক্ট</a></nav></header><main><section class="detail-layout"><div class="detail-image" style="background-image:url('<?= productImageUrl($product['image']) ?>');background-size:cover;background-position:center;"></div><div class="detail-info"><h1><?=e($product['name'])?></h1><div class="stars">★★★★★ <span>(<?=e($product['rating'])?>)</span></div><div class="price-wrap"><b>৳ <?=number_format((float)$product['price'])?></b><?php if(!empty($product['old_price'])): ?><span class="old-price">৳ <?=number_format((float)$product['old_price'])?></span><?php endif; ?></div><p><?=e($product['description'] ?: 'এই প্রোডাক্টটি আপনার জন্য খুবই উপযুক্ত।')?></p><div class="detail-actions"><a class="button" href="cart.php?add=<?=e($product['id'])?>">কার্টে যোগ করুন</a><a class="button secondary" href="products.php">আরও দেখুন</a></div><div class="stock-box">স্টক: <?=e((int)$product['stock'])?></div></div></section></main></body></html>
