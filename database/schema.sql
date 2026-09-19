@@ -13,11 +13,20 @@ CREATE TABLE admins (
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+CREATE TABLE users (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  name VARCHAR(150) NOT NULL,
+  email VARCHAR(190) NOT NULL UNIQUE,
+  phone VARCHAR(40) NULL,
+  password_hash VARCHAR(255) NOT NULL,
+  address TEXT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 CREATE TABLE categories (
   id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   name VARCHAR(120) NOT NULL,
   icon VARCHAR(20) DEFAULT '📦',
-  product_count INT DEFAULT 0,
   is_active TINYINT(1) DEFAULT 1
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
@@ -42,13 +51,15 @@ CREATE TABLE products (
 
 CREATE TABLE orders (
   id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  user_id INT UNSIGNED NULL,
   customer_name VARCHAR(150) NOT NULL,
   phone VARCHAR(40) NOT NULL,
   email VARCHAR(190),
   address TEXT NOT NULL,
   total DECIMAL(12,2) NOT NULL DEFAULT 0,
   status ENUM('pending','confirmed','packed','shipped','delivered','cancelled') DEFAULT 'pending',
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE order_items (
@@ -62,10 +73,22 @@ CREATE TABLE order_items (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 INSERT INTO settings (setting_key, setting_value) VALUES
-('site_name','GadgetMart'), ('site_tagline','সেরা গ্যাজেটস সেরা দামে'),
+('site_name','GadgetMart'),
+('site_tagline','সেরা গ্যাজেটস সেরা দামে'),
 ('footer_description','আপনার একমাত্র গ্যাজেট ডেস্টিনেশন। স্মার্টফোন, ল্যাপটপ, অডিও, স্মার্টওয়াচ ও অ্যাকসেসরিজের সেরা সংগ্রহ।'),
-('phone','+880 1234-567890'), ('email','support@gadgetmart.com'), ('address','ঢাকা, বাংলাদেশ'),
-('facebook_url','#'), ('instagram_url','#'), ('youtube_url','#'), ('twitter_url','#'), ('whatsapp_url','#')
+('phone','+880 1234-567890'),
+('email','support@gadgetmart.com'),
+('address','ঢাকা, বাংলাদেশ'),
+('facebook_url','#'),
+('instagram_url','#'),
+('youtube_url','#'),
+('twitter_url','#'),
+('whatsapp_url','#')
 ON DUPLICATE KEY UPDATE setting_key=VALUES(setting_key);
 
-INSERT INTO categories (name, icon) VALUES ('স্মার্টফোন','📱'),('ল্যাপটপ','💻'),('অডিও','🎧'),('স্মার্টওয়াচ','⌚'),('অ্যাকসেসরিজ','🔌');
+INSERT INTO categories (name, icon) VALUES
+('স্মার্টফোন','📱'),
+('ল্যাপটপ','💻'),
+('অডিও','🎧'),
+('স্মার্টওয়াচ','⌚'),
+('অ্যাকসেসরিজ','🔌');
